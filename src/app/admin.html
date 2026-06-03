@@ -1,0 +1,416 @@
+<!-- Navigation Header -->
+<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm" id="admin-header">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <!-- Branding logo -->
+    <a routerLink="/" class="flex items-center gap-2.5 text-slate-950 hover:opacity-95 transition-opacity" id="admin-brand">
+      <div class="flex items-center justify-center w-9 h-9 bg-slate-900 border border-slate-800 text-white rounded-xl shadow-md">
+        <mat-icon class="text-xl leading-none">admin_panel_settings</mat-icon>
+      </div>
+      <span class="font-display font-black text-xl tracking-tight">Admin<span class="text-slate-500">Suite</span></span>
+    </a>
+
+    <!-- Navigation links -->
+    <div class="flex items-center gap-4" id="admin-nav-menu">
+      <a
+        routerLink="/"
+        id="btn-admin-nav-events"
+        class="flex items-center gap-1.5 px-3 py-2 text-slate-650 hover:text-slate-950 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+      >
+        <mat-icon class="text-lg leading-none">arrow_back</mat-icon>
+        Events Catalog
+      </a>
+
+      <button
+        id="btn-admin-logout"
+        (click)="handleForceLogout()"
+        class="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 hover:border-slate-350 hover:bg-slate-50 text-slate-600 hover:text-slate-900 text-xs font-semibold rounded-xl transition-all cursor-pointer bg-white"
+      >
+        <mat-icon class="text-lg">power_settings_new</mat-icon>
+        <span class="hidden sm:inline">Log Out</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Main Scaffold -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14" id="admin-main-stage">
+  
+  <!-- CASE A: UNAUTHORIZED ACCOUNT SECURITY SCREEN -->
+  @if (isLoggedIn() && !isAdminUser()) {
+    <div class="max-w-md mx-auto text-center py-20 px-8 bg-white border border-slate-200 shadow-md rounded-[2.5rem] md:my-20" id="admin-unauthorized-box">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 mb-6 shadow-sm" id="shield-unauthorized">
+        <mat-icon class="text-3xl leading-none">lock</mat-icon>
+      </div>
+      <h3 class="text-2xl font-display font-black tracking-tight text-slate-900">Administrator Credentials Required</h3>
+      <p class="text-slate-500 text-sm mt-2.5 leading-relaxed font-sans">
+        You are currently signed in as <span class="font-bold text-slate-700">{{ currentUserEmail() }}</span>. This email does not have administrative permissions.
+      </p>
+
+      <div class="mt-8 p-5 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs space-y-2.5 text-slate-700" id="allowed-admins-list">
+        <p class="font-bold text-slate-900 font-display text-xs uppercase tracking-wider">Authorized Admin Emails:</p>
+        <ul class="list-disc pl-4 space-y-1.5 font-mono text-[11px] text-slate-600">
+          <li>jamesguoas&#144;gmail.com</li>
+          <li>khoiphan21&#144;gmail.com</li>
+        </ul>
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5" id="unauth-actions">
+        <!-- Switch Account action -->
+        <button
+          id="btn-unauth-switch"
+          (click)="handleForceLogout()"
+          class="w-full sm:w-auto h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <mat-icon class="text-base">swap_horiz</mat-icon>
+          Switch Account
+        </button>
+        <!-- Back to Catalog -->
+        <a
+          routerLink="/"
+          id="btn-unauth-catalog"
+          class="w-full sm:w-auto h-11 px-6 border border-slate-200 hover:border-slate-350 text-slate-650 hover:text-slate-900 text-xs font-bold uppercase tracking-wider rounded-xl inline-flex items-center justify-center gap-1.5 transition-all text-center"
+        >
+          <mat-icon class="text-base">home</mat-icon>
+          Events Catalog
+        </a>
+      </div>
+    </div>
+  }
+
+  <!-- CASE B: AUTHORIZED ADMIN CONSOLE -->
+  @if (isLoggedIn() && isAdminUser()) {
+    
+    <!-- Dynamic Feedback alerts -->
+    @if (errorMessage()) {
+      <div class="mb-8 p-5 bg-red-50 border border-red-200 rounded-[2rem] flex items-start gap-4 text-red-800 text-sm max-w-4xl animate-fade-in shadow-sm" id="admin-error-banner">
+        <mat-icon class="text-red-500 mt-0.5 flex-shrink-0 text-xl leading-none">error_outline</mat-icon>
+        <div class="space-y-1">
+          <p class="font-bold text-red-950 font-display">System Notice</p>
+          <p class="leading-relaxed text-red-900">{{ errorMessage() }}</p>
+        </div>
+      </div>
+    }
+
+    @if (successMessage()) {
+      <div class="mb-8 p-5 bg-emerald-55 border border-emerald-200 rounded-[2rem] flex items-start gap-4 text-emerald-800 text-sm max-w-4xl animate-fade-in shadow-sm bg-emerald-50" id="admin-success-banner">
+        <mat-icon class="text-emerald-550 mt-0.5 flex-shrink-0 text-xl leading-none text-emerald-600">check_circle</mat-icon>
+        <div class="space-y-1">
+          <p class="font-bold text-emerald-950 font-display">System Success</p>
+          <p class="leading-relaxed text-emerald-900">{{ successMessage() }}</p>
+        </div>
+      </div>
+    }
+
+    <!-- Bento Grid Container for whole Admin view -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" id="admin-workbench">
+      
+      <!-- COLUMN 1: EVENT BUILDER FORM (span-5) -->
+      <section class="lg:col-span-12 xl:col-span-5 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm p-6 sm:p-8" id="event-builder-panel">
+        <div class="border-b border-slate-100 pb-5 mb-6 flex items-center gap-3">
+          <div class="p-2 bg-slate-50 text-slate-800 border border-slate-100 rounded-xl">
+            <mat-icon class="text-lg leading-none">add_circle_outline</mat-icon>
+          </div>
+          <div>
+            <h3 class="text-xl font-display font-black tracking-tight text-slate-900">Schedule New Event</h3>
+            <p class="text-slate-400 text-xs mt-0.5 font-sans">Publish an active event on the catalog board</p>
+          </div>
+        </div>
+
+        <form [formGroup]="eventForm" (ngSubmit)="onCreateEvent()" class="space-y-5" id="event-creation-form">
+          <!-- Name -->
+          <div class="space-y-1.5" id="ctrl-name-container">
+            <label for="name" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">Event Title Name</label>
+            <input
+              id="name"
+              type="text"
+              formControlName="name"
+              placeholder="e.g., Summer Retreat 2026"
+              class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-sans"
+            />
+          </div>
+
+          <!-- Location & Date -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Location -->
+            <div class="space-y-1.5" id="ctrl-location-container">
+              <label for="location" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">Location</label>
+              <input
+                id="location"
+                type="text"
+                formControlName="location"
+                placeholder="HQ Conference Room"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-sans"
+              />
+            </div>
+            <!-- Date -->
+            <div class="space-y-1.5" id="ctrl-date-container">
+              <label for="date" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">Date & Time</label>
+              <input
+                id="date"
+                type="datetime-local"
+                formControlName="date"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-sans"
+              />
+            </div>
+          </div>
+
+          <!-- Capacity & Cost -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Capacity -->
+            <div class="space-y-1.5" id="ctrl-capacity-container">
+              <label for="capacity" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">Max. Capacity Limit</label>
+              <input
+                id="capacity"
+                type="number"
+                formControlName="capacity"
+                placeholder="20"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono font-bold"
+              />
+            </div>
+            <!-- Cost -->
+            <div class="space-y-1.5" id="ctrl-cost-container">
+              <label for="cost" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">Total Booking Cost ($)</label>
+              <input
+                id="cost"
+                type="number"
+                formControlName="cost"
+                placeholder="200"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono font-bold"
+              />
+            </div>
+          </div>
+
+          <!-- Additional Information (Markdown) -->
+          <div class="space-y-1.5" id="ctrl-info-container">
+            <label for="additionalInfo" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans flex items-center justify-between">
+              <span>Description / Notes (Markdown)</span>
+              <span class="text-[9px] text-slate-400 font-sans lowercase font-normal">Supports bullet lists and bold text</span>
+            </label>
+            <textarea
+              id="additionalInfo"
+              formControlName="additionalInfo"
+              placeholder="# Rules&#10;- Casual clothing allowed&#10;- Lunch and soft drinks will be fully split by host"
+              rows="6"
+              class="block w-full px-4 py-3 bg-slate-55 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono text-slate-700"
+            ></textarea>
+          </div>
+
+          <!-- Real-Time Markdown Preview box (Embedded Bento sub-card style) -->
+          @if (additionalInfoPreview) {
+            <div class="p-5 bg-slate-50 border border-slate-200/70 rounded-2xl mt-4 space-y-2 animate-fade-in" id="markdown-live-preview-box">
+              <div class="text-[10px] uppercase text-indigo-600 font-bold tracking-wider font-sans">Live Markdown Preview</div>
+              <div 
+                class="prose prose-sm prose-slate text-xs text-slate-600 prose-p:my-1 prose-ul:list-disc prose-ul:pl-4"
+                [innerHTML]="additionalInfoPreview | markdown"
+              ></div>
+            </div>
+          }
+
+          <!-- Form submission action -->
+          <button
+            id="btn-admin-submit-event"
+            type="submit"
+            [disabled]="eventForm.invalid || submitting()"
+            class="w-full h-12 flex items-center justify-center gap-2 bg-indigo-650 hover:bg-slate-800 text-white font-display font-bold uppercase tracking-wider text-xs rounded-xl mt-5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-indigo-100 bg-indigo-600"
+          >
+            @if (submitting()) {
+              <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              Scheduling Event...
+            } @else {
+              <mat-icon class="text-base leading-none">check</mat-icon>
+              Publish & Schedule Event
+            }
+          </button>
+        </form>
+      </section>
+
+      <!-- COLUMN 2: PARTICIPANTS & STATE MANAGER (span-7) -->
+      <section class="lg:col-span-12 xl:col-span-7 space-y-8" id="admin-management-panel">
+        
+        <!-- Live Events selector catalog (Styled as a bento card block) -->
+        <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm p-6 sm:p-8" id="admin-catalog-box">
+          <div class="border-b border-slate-100 pb-4 mb-5">
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans select-none">Active Events Catalog (Switch Selected Event)</h4>
+          </div>
+
+          @if (eventList().length === 0) {
+            <div class="text-center py-12" id="admin-catalog-empty">
+              <mat-icon class="text-slate-300 text-3xl">event_busy</mat-icon>
+              <p class="text-slate-400 text-xs font-medium font-sans mt-2">No scheduled events found. Use the editor to catalog your first event.</p>
+            </div>
+          } @else {
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="admin-catalog-selector-grid">
+              @for (ev of eventList(); track ev.id) {
+                <button
+                  type="button"
+                  [id]="'btn-select-event-' + ev.id"
+                  (click)="selectEvent(ev.id)"
+                  class="p-4 text-left border rounded-2xl flex flex-col justify-between hover:border-slate-400 transition-all cursor-pointer bg-slate-50/50"
+                  [class.border-indigo-600]="selectedEventId() === ev.id"
+                  [class.ring-2]="selectedEventId() === ev.id"
+                  [class.ring-indigo-600/10]="selectedEventId() === ev.id"
+                  [class.bg-white]="selectedEventId() === ev.id"
+                  [class.border-slate-205]="selectedEventId() !== ev.id"
+                >
+                  <div class="w-full">
+                    <p class="font-bold text-sm text-slate-900 truncate font-display">{{ ev.name }}</p>
+                    <p class="text-[11px] text-slate-400 font-sans mt-1.5 flex items-center gap-1">
+                      <mat-icon class="text-xs">location_on</mat-icon>
+                      <span class="truncate">{{ ev.location }}</span>
+                    </p>
+                  </div>
+                  
+                  <div class="w-full flex items-center justify-between mt-4 pt-3 border-t border-slate-100 text-[10px] text-slate-500 font-mono">
+                    <span class="font-bold text-slate-600 flex items-center gap-1">
+                      <mat-icon class="text-xs">people</mat-icon>
+                      {{ ev.participants.length }} / {{ ev.capacity }} slots
+                    </span>
+                    @if (ev.finalised) {
+                      <span class="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex items-center gap-0.5">
+                        <mat-icon class="text-[11px] leading-none">lock</mat-icon> LOCKED
+                      </span>
+                    } @else {
+                      <span class="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">OPEN</span>
+                    }
+                  </div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Participants Management details console (Styled as modern Bento box segment) -->
+        @if (getSelectedEvent(); as activeEvent) {
+          <div class="bg-white border border-slate-200 rounded-[2.5rem] shadow-sm p-6 sm:p-8 animate-fade-in" id="admin-participants-panel">
+            
+            <!-- Console Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-5 mb-6 gap-4">
+              <div class="space-y-1">
+                <span class="text-[9px] text-indigo-600 font-black uppercase tracking-widest font-mono">Active Console Segment</span>
+                <h3 class="text-2xl font-display font-black tracking-tight text-slate-900">{{ activeEvent.name }}</h3>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 font-medium font-sans">
+                  <span class="flex items-center gap-1 text-slate-500"><mat-icon class="text-sm">schedule</mat-icon> {{ formatDate(activeEvent.date) }}</span>
+                  <span>•</span>
+                  <span class="flex items-center gap-1 text-slate-500"><mat-icon class="text-sm">location_on</mat-icon> {{ activeEvent.location }}</span>
+                </div>
+              </div>
+
+              <!-- Lockdown finalised button -->
+              <button
+                [id]="'btn-toggle-finalise-' + activeEvent.id"
+                (click)="handleToggleFinalise(activeEvent)"
+                class="inline-flex items-center justify-center gap-1.5 h-11 px-5 text-xs font-bold uppercase tracking-wider rounded-xl border transition-all cursor-pointer shadow-sm"
+                [class.bg-amber-600]="activeEvent.finalised"
+                [class.hover:bg-amber-700]="activeEvent.finalised"
+                [class.text-white]="activeEvent.finalised"
+                [class.border-amber-600]="activeEvent.finalised"
+                [class.shadow-amber-100]="activeEvent.finalised"
+                [class.bg-white]="!activeEvent.finalised"
+                [class.hover:bg-slate-50]="!activeEvent.finalised"
+                [class.text-slate-700]="!activeEvent.finalised"
+                [class.border-slate-250]="!activeEvent.finalised"
+              >
+                <mat-icon class="text-base">{{ activeEvent.finalised ? 'lock' : 'lock_open' }}</mat-icon>
+                {{ activeEvent.finalised ? 'Unlock Bookings' : 'Lock Event (Finalise)' }}
+              </button>
+            </div>
+
+            <!-- Calculated Financial Cost Splits summaries (Bento stats cells) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-slate-150 p-5 rounded-2xl mb-8 text-sm" id="admin-finance-split-matrix">
+              <!-- Cell 1 -->
+              <div class="space-y-1" id="split-mat-1">
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider font-sans">Total Event cost</p>
+                <p class="text-2xl font-mono font-black text-slate-850 text-slate-900">{{ activeEvent.cost | currency:'USD' }}</p>
+              </div>
+              <!-- Cell 2 -->
+              <div class="space-y-1" id="split-mat-2">
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider font-sans">Members registered</p>
+                <p class="text-2xl font-mono font-black text-slate-850 text-slate-900">{{ activeEvent.participants.length }} joined</p>
+              </div>
+              <!-- Cell 3 -->
+              <div class="space-y-1" id="split-mat-3">
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider font-sans">Calculated Split cost</p>
+                <p class="text-2xl font-mono font-black border-l-2 border-indigo-600 pl-3 leading-none text-indigo-650 text-indigo-600">
+                  {{ activeEvent.costPerParticipant | currency:'USD' }} <span class="text-[10px] text-slate-400 font-sans font-normal lowercase select-none">each</span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Participants list database -->
+            <div class="space-y-3" id="admin-participants-table-box">
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans select-none">Registrations Member List</h4>
+              
+              @if (activeEvent.participants.length === 0) {
+                <div class="py-14 text-center border-2 border-dashed border-slate-200 rounded-3xl" id="no-participants-banner">
+                  <mat-icon class="text-slate-300 text-3xl">people_outline</mat-icon>
+                  <p class="text-slate-450 text-xs font-medium mt-2 font-sans">Zero participants currently registered for this event slot.</p>
+                </div>
+              } @else {
+                <div class="overflow-x-auto border border-slate-200 rounded-2xl shadow-sm" id="participant-list-container">
+                  <table class="min-w-full divide-y divide-slate-150 text-left text-xs text-slate-800" id="participant-list-table">
+                    <thead class="bg-slate-50 text-slate-500 font-medium uppercase text-[10px] tracking-wider" id="table-head">
+                      <tr>
+                        <th class="px-5 py-4 font-bold">Attendee Name</th>
+                        <th class="px-5 py-4 font-bold">Email</th>
+                        <th class="px-5 py-4 text-center font-bold">Split Payment Status</th>
+                        <th class="px-5 py-4 text-right font-bold">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-150 bg-white" id="table-body">
+                      @for (p of activeEvent.participants; track p.userId) {
+                        <tr class="hover:bg-slate-50/50 transition-colors" [id]="'participant-row-' + p.userId">
+                          <!-- Name -->
+                          <td class="px-5 py-4 font-bold text-slate-900 font-display text-xs">
+                            {{ p.userName }}
+                          </td>
+                          <!-- Email -->
+                          <td class="px-5 py-4 text-slate-450 font-mono text-[11px]">
+                            {{ p.userEmail }}
+                          </td>
+                          <!-- Paid Checkbox/Toggle -->
+                          <td class="px-5 py-4 text-center">
+                            <button
+                              type="button"
+                              [id]="'btn-toggle-paid-' + p.userId"
+                              (click)="handleTogglePayment(p)"
+                              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold border rounded-lg transition-colors cursor-pointer select-none uppercase tracking-wider text-[10px]"
+                              [class.bg-emerald-50]="p.paid"
+                              [class.border-emerald-250]="p.paid"
+                              [class.text-emerald-800]="p.paid"
+                              [class.bg-amber-50]="!p.paid"
+                              [class.border-amber-205]="!p.paid"
+                              [class.text-amber-800]="!p.paid"
+                            >
+                              <mat-icon class="text-sm leading-none">{{ p.paid ? 'check_circle' : 'pending' }}</mat-icon>
+                              {{ p.paid ? 'Paid' : 'Unpaid' }}
+                            </button>
+                          </td>
+                          <!-- Actions (Remove) -->
+                          <td class="px-5 py-4 text-right">
+                            <button
+                              type="button"
+                              [id]="'btn-remove-participant-' + p.userId"
+                              (click)="handleRemoveParticipant(activeEvent.id, p.userId, p.userName)"
+                              class="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-650 transition-colors cursor-pointer"
+                              title="Remove Participant Booking"
+                            >
+                              <mat-icon class="text-lg">delete_outline</mat-icon>
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
+
+          </div>
+        }
+
+      </section>
+
+    </div>
+  }
+
+</main>

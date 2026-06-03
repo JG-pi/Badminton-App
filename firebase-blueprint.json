@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "event": {
+      "title": "Event",
+      "description": "Represents an event created by an administrator.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the event."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the event."
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time of the event."
+        },
+        "capacity": {
+          "type": "integer",
+          "description": "The maximum number of participants allowed."
+        },
+        "location": {
+          "type": "string",
+          "description": "The location where the event is hosted."
+        },
+        "additionalInfo": {
+          "type": "string",
+          "description": "Additional event details in Markdown format."
+        },
+        "cost": {
+          "type": "number",
+          "description": "The total cost of the event, to be divided equally among participants."
+        },
+        "finalised": {
+          "type": "boolean",
+          "description": "Whether the event booking is finalized and locked."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the event was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the event was last updated."
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "The user ID of the admin who created the event."
+        }
+      },
+      "required": [
+        "name",
+        "date",
+        "capacity",
+        "location",
+        "additionalInfo",
+        "cost",
+        "finalised",
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ]
+    },
+    "booking": {
+      "title": "Booking",
+      "description": "Represents a signup or reservation for an event by a participant.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the booking, typically eventId_userId."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "The ID of the event being booked."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user booking the event."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The email of the user booking the event."
+        },
+        "userName": {
+          "type": "string",
+          "description": "The name of the user booking the event."
+        },
+        "paid": {
+          "type": "boolean",
+          "description": "Whether the participant has paid their split of the event cost."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the booking was made."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the booking was last updated."
+        }
+      },
+      "required": [
+        "eventId",
+        "userId",
+        "userEmail",
+        "userName",
+        "paid",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "events": {
+      "schema": "event",
+      "description": "Collection of all scheduling events created by administrators."
+    },
+    "bookings": {
+      "schema": "booking",
+      "description": "Collection of bookings (sign-ups) made by users for particular events."
+    }
+  }
+}

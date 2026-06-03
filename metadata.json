@@ -1,0 +1,6 @@
+{
+  "name": "Event Booking and Cost Splitter",
+  "description": "An Angular application for scheduling events, signing up, and splitting event costs equally among participants.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

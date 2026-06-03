@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'jamesguoas@gmail.com' ||
+        request.auth.token.email == 'khoiphan21@gmail.com' ||
+        request.auth.token.email == 'admin@luna.academy'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper representations of incoming and existing data
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation definitions
+    function isValidEvent(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 128 &&
+             data.date is string && data.date.size() > 0 &&
+             data.capacity is int && data.capacity >= 1 &&
+             data.location is string && data.location.size() <= 256 &&
+             data.additionalInfo is string && data.additionalInfo.size() <= 10000 &&
+             (data.cost is int || data.cost is float) && data.cost >= 0 &&
+             data.finalised is bool &&
+             data.createdBy is string &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.eventId is string && data.eventId.size() > 0 && data.eventId.size() <= 128 &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+             data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() <= 256 &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() <= 128 &&
+             data.paid is bool &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    // MATCH MODULE: EVENTS
+    match /events/{eventId} {
+      allow read, get, list: if isSignedIn();
+
+      allow create: if isAdmin() && isValidId(eventId) && isValidEvent(incoming()) &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time &&
+                    incoming().createdBy == request.auth.uid &&
+                    incoming().finalised == false;
+
+      allow update: if isAdmin() && isValidId(eventId) && isValidEvent(incoming()) &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().updatedAt == request.time &&
+                    (
+                      // Locked event modification check: 
+                      // If it is already finalised, admins can still modify fields (override),
+                      // but we explicitly log that they can change finalized status or details.
+                      incoming().finalised != existing().finalised ||
+                      incoming().diff(existing()).affectedKeys().hasAny(['name', 'date', 'capacity', 'location', 'additionalInfo', 'cost', 'finalised', 'updatedAt'])
+                    );
+
+      allow delete: if isAdmin() && isValidId(eventId);
+    }
+
+    // MATCH MODULE: BOOKINGS
+    match /bookings/{bookingId} {
+      // Direct reads and list queries must be secured on server
+      allow read, get: if isSignedIn() && (isAdmin() || existing().userId == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+
+      allow create: if isEmailVerified() && isValidId(bookingId) && isValidBooking(incoming()) &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time &&
+                    (
+                      // Case A: Admin can book for any user
+                      isAdmin() ||
+                      // Case B: Regular user books for themselves
+                      (
+                        incoming().userId == request.auth.uid &&
+                        incoming().userEmail == request.auth.token.email &&
+                        incoming().paid == false &&
+                        // Master Gate check: Check if the referenced event exists and is not finalised
+                        exists(/databases/$(database)/documents/events/$(incoming().eventId)) &&
+                        get(/databases/$(database)/documents/events/$(incoming().eventId)).data.finalised == false
+                      )
+                    );
+
+      allow update: if isEmailVerified() && isValidId(bookingId) && isValidBooking(incoming()) &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().eventId == existing().eventId &&
+                    incoming().userId == existing().userId &&
+                    incoming().userEmail == existing().userEmail &&
+                    incoming().userName == existing().userName &&
+                    incoming().updatedAt == request.time &&
+                    (
+                      // Only admin can change paid status
+                      isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['paid', 'updatedAt'])
+                    );
+
+      allow delete: if isEmailVerified() && isValidId(bookingId) && (
+                    // Case A: Admin can delete any booking
+                    isAdmin() ||
+                    // Case B: Regular owner can cancel signup ONLY if the event is not finalized
+                    (
+                      existing().userId == request.auth.uid &&
+                      exists(/databases/$(database)/documents/events/$(existing().eventId)) &&
+                      get(/databases/$(database)/documents/events/$(existing().eventId)).data.finalised == false
+                    )
+                  );
+    }
+  }
+}
