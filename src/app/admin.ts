@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription, combineLatest } from 'rxjs';
-import { FirebaseService, AppEvent, AppBooking, AppLocation, AppRuntimeError, isUserAdmin } from './firebase';
+import { FirebaseService, AppEvent, AppBooking, AppLocation, AppRuntimeError, AppShuttlecock, isUserAdmin } from './firebase';
 import { MarkdownPipe } from './markdown';
 import { TeamDraw, createRandomTeamDraw } from './team-draw';
 
@@ -42,18 +42,22 @@ export class Admin implements OnInit, OnDestroy {
   private authSubscription?: Subscription;
   private dataSubscription?: Subscription;
   private locationsSubscription?: Subscription;
+  private shuttlecocksSubscription?: Subscription;
   private runtimeErrorsSubscription?: Subscription;
   private eventFormSubscription?: Subscription;
   eventList = signal<AdminEventViewModel[]>([]);
   locationList = signal<AppLocation[]>([]);
+  shuttlecockList = signal<AppShuttlecock[]>([]);
   runtimeErrorList = signal<AppRuntimeError[]>([]);
   selectedEventId = signal<string | null>(null);
   loading = signal<boolean>(true);
   submitting = signal<boolean>(false);
   savingLocation = signal<boolean>(false);
+  savingShuttlecock = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   pendingDeleteLocationId = signal<string | null>(null);
+  pendingDeleteShuttlecockId = signal<string | null>(null);
   pendingFinaliseEventId = signal<string | null>(null);
   pendingPaymentBookingId = signal<string | null>(null);
   pendingRemoveBookingId = signal<string | null>(null);
@@ -81,7 +85,7 @@ export class Admin implements OnInit, OnDestroy {
       label: 'Locations',
       description: 'Court rate settings',
       icon: 'location_on',
-      count: () => this.locationList().length
+      count: () => this.locationList().length + this.shuttlecockList().length
     },
     {
       section: 'diagnostics',
@@ -123,6 +127,13 @@ export class Admin implements OnInit, OnDestroy {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0)]
     }),
+    shuttlecockId: new FormControl('', {
+      nonNullable: true
+    }),
+    shuttlecockTubeCount: new FormControl<number>(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)]
+    }),
     date: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
@@ -147,6 +158,17 @@ export class Admin implements OnInit, OnDestroy {
       validators: [Validators.required, Validators.maxLength(128)]
     }),
     pricePerCourtHour: new FormControl<number>(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)]
+    })
+  });
+
+  shuttlecockForm = new FormGroup({
+    name: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.maxLength(128)]
+    }),
+    pricePerTube: new FormControl<number>(0, {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0)]
     })
@@ -179,7 +201,13 @@ export class Admin implements OnInit, OnDestroy {
   }
 
   get calculatedShuttlecockCostPreview(): number {
-    return this.roundCurrency(Number(this.eventForm.controls.shuttlecockCost.value) || 0);
+    const selectedShuttlecock = this.getSelectedShuttlecock();
+    if (!selectedShuttlecock) {
+      return this.roundCurrency(Number(this.eventForm.controls.shuttlecockCost.value) || 0);
+    }
+
+    const tubeCount = Number(this.eventForm.controls.shuttlecockTubeCount.value) || 0;
+    return this.roundCurrency(selectedShuttlecock.pricePerTube * tubeCount);
   }
 
   ngOnInit(): void {
@@ -218,6 +246,10 @@ export class Admin implements OnInit, OnDestroy {
           this.locationsSubscription.unsubscribe();
           this.locationsSubscription = undefined;
         }
+        if (this.shuttlecocksSubscription) {
+          this.shuttlecocksSubscription.unsubscribe();
+          this.shuttlecocksSubscription = undefined;
+        }
         if (this.runtimeErrorsSubscription) {
           this.runtimeErrorsSubscription.unsubscribe();
           this.runtimeErrorsSubscription = undefined;
@@ -227,6 +259,7 @@ export class Admin implements OnInit, OnDestroy {
 
       this.startAdminDataSubscription();
       this.startLocationSubscription();
+      this.startShuttlecockSubscription();
       this.startRuntimeErrorsSubscription();
     });
   }
@@ -294,6 +327,33 @@ export class Admin implements OnInit, OnDestroy {
     });
   }
 
+  private startShuttlecockSubscription(): void {
+    this.shuttlecocksSubscription?.unsubscribe();
+
+    this.shuttlecocksSubscription = this.firebaseService.selectShuttlecocks().subscribe({
+      next: (shuttlecocks) => {
+        this.shuttlecockList.set(shuttlecocks);
+        this.syncCostCalculator();
+      },
+      error: (e) => {
+        console.error('Could not load admin shuttlecock settings', e);
+        void this.reloadShuttlecocksFromServer(e);
+      }
+    });
+  }
+
+  private async reloadShuttlecocksFromServer(fallbackError?: unknown): Promise<void> {
+    try {
+      const shuttlecocks = await this.firebaseService.fetchShuttlecocksFromServer();
+      this.shuttlecockList.set(shuttlecocks);
+      this.syncCostCalculator();
+      this.errorMessage.set(null);
+    } catch (e) {
+      console.error('Could not reload shuttlecock settings from server', e);
+      this.errorMessage.set(this.getWriteErrorMessage(fallbackError ?? e, 'Could not load shuttlecock settings.'));
+    }
+  }
+
   private startRuntimeErrorsSubscription(): void {
     if (this.runtimeErrorsSubscription) {
       return;
@@ -319,6 +379,9 @@ export class Admin implements OnInit, OnDestroy {
     }
     if (this.locationsSubscription) {
       this.locationsSubscription.unsubscribe();
+    }
+    if (this.shuttlecocksSubscription) {
+      this.shuttlecocksSubscription.unsubscribe();
     }
     if (this.runtimeErrorsSubscription) {
       this.runtimeErrorsSubscription.unsubscribe();
@@ -384,17 +447,30 @@ export class Admin implements OnInit, OnDestroy {
     return this.locationList().find(location => location.id === locationId);
   }
 
+  getSelectedShuttlecock(): AppShuttlecock | undefined {
+    const shuttlecockId = this.eventForm.controls.shuttlecockId.value;
+    return this.shuttlecockList().find(shuttlecock => shuttlecock.id === shuttlecockId);
+  }
+
   private syncCostCalculator(): void {
     const selectedLocation = this.getSelectedRateLocation();
-    if (!selectedLocation) return;
+    const selectedShuttlecock = this.getSelectedShuttlecock();
 
     const courtCount = Number(this.eventForm.controls.courtCount.value) || 0;
     const durationHours = Number(this.eventForm.controls.durationHours.value) || 0;
-    const shuttlecockCost = this.calculatedShuttlecockCostPreview;
-    const courtCost = this.roundCurrency(selectedLocation.pricePerCourtHour * courtCount * durationHours);
+    const shuttlecockTubeCount = Number(this.eventForm.controls.shuttlecockTubeCount.value) || 0;
+    const courtCost = selectedLocation
+      ? this.roundCurrency(selectedLocation.pricePerCourtHour * courtCount * durationHours)
+      : 0;
+    const shuttlecockCost = selectedShuttlecock
+      ? this.roundCurrency(selectedShuttlecock.pricePerTube * shuttlecockTubeCount)
+      : this.roundCurrency(Number(this.eventForm.controls.shuttlecockCost.value) || 0);
     const totalCost = this.roundCurrency(courtCost + shuttlecockCost);
 
-    this.eventForm.controls.location.setValue(selectedLocation.name, { emitEvent: false });
+    if (selectedLocation) {
+      this.eventForm.controls.location.setValue(selectedLocation.name, { emitEvent: false });
+    }
+    this.eventForm.controls.shuttlecockCost.setValue(shuttlecockCost, { emitEvent: false });
     this.eventForm.controls.cost.setValue(totalCost, { emitEvent: false });
   }
 
@@ -467,6 +543,8 @@ export class Admin implements OnInit, OnDestroy {
       courtCount: 1,
       durationHours: inferredDuration,
       shuttlecockCost,
+      shuttlecockId: '',
+      shuttlecockTubeCount: 0,
       date: this.toDateTimeLocalInputValue(event.date),
       capacity: event.capacity,
       cost: event.cost,
@@ -545,6 +623,8 @@ export class Admin implements OnInit, OnDestroy {
       courtCount: 1,
       durationHours: 1,
       shuttlecockCost: 0,
+      shuttlecockId: '',
+      shuttlecockTubeCount: 0,
       date: '',
       capacity: 10,
       cost: 0,
@@ -566,6 +646,12 @@ export class Admin implements OnInit, OnDestroy {
     if (!selectedLocation) {
       this.submitting.set(false);
       this.errorMessage.set('Select a saved location before scheduling this event.');
+      return null;
+    }
+
+    if (!this.editingEventId() && this.shuttlecockList().length > 0 && !this.getSelectedShuttlecock()) {
+      this.submitting.set(false);
+      this.errorMessage.set('Select a saved shuttlecock before scheduling this event.');
       return null;
     }
 
@@ -684,6 +770,64 @@ export class Admin implements OnInit, OnDestroy {
       this.errorMessage.set(this.getWriteErrorMessage(e, 'Could not delete location.'));
     } finally {
       this.pendingDeleteLocationId.set(null);
+    }
+  }
+
+  async handleCreateShuttlecock(): Promise<void> {
+    if (this.shuttlecockForm.invalid) {
+      this.shuttlecockForm.markAllAsTouched();
+      this.errorMessage.set('Enter a shuttlecock name and price per tube.');
+      return;
+    }
+
+    const { name, pricePerTube } = this.shuttlecockForm.getRawValue();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      this.errorMessage.set('Enter a shuttlecock name.');
+      return;
+    }
+
+    this.savingShuttlecock.set(true);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    try {
+      await this.firebaseService.createShuttlecock(trimmedName, Number(pricePerTube));
+      const shuttlecocks = await this.firebaseService.fetchShuttlecocksFromServer();
+      this.shuttlecockList.set(shuttlecocks);
+      this.syncCostCalculator();
+      this.successMessage.set(`Saved shuttlecock "${trimmedName}".`);
+      this.shuttlecockForm.reset({
+        name: '',
+        pricePerTube: 0
+      });
+    } catch (e) {
+      console.error('Error saving shuttlecock', e);
+      this.errorMessage.set(this.getWriteErrorMessage(e, 'Could not save shuttlecock.'));
+    } finally {
+      this.savingShuttlecock.set(false);
+    }
+  }
+
+  async handleDeleteShuttlecock(shuttlecock: AppShuttlecock): Promise<void> {
+    const confirmDelete = confirm(`Remove ${shuttlecock.name} from saved shuttlecocks? Existing events will keep their stored shuttlecock cost.`);
+    if (!confirmDelete) return;
+
+    this.pendingDeleteShuttlecockId.set(shuttlecock.id);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    try {
+      await this.firebaseService.deleteShuttlecock(shuttlecock.id);
+      if (this.eventForm.controls.shuttlecockId.value === shuttlecock.id) {
+        this.eventForm.controls.shuttlecockId.setValue('');
+      }
+      this.successMessage.set(`Removed shuttlecock "${shuttlecock.name}".`);
+    } catch (e) {
+      console.error('Error deleting shuttlecock', e);
+      this.errorMessage.set(this.getWriteErrorMessage(e, 'Could not delete shuttlecock.'));
+    } finally {
+      this.pendingDeleteShuttlecockId.set(null);
     }
   }
 

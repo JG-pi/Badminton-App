@@ -2,7 +2,7 @@ import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth, User, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, getRedirectResult, setPersistence, browserLocalPersistence, inMemoryPersistence, signInWithPopup, signInWithRedirect, browserPopupRedirectResolver } from 'firebase/auth';
-import { getFirestore, Firestore, collection, doc, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, getDocFromServer, getDoc, serverTimestamp, Timestamp, orderBy, limit } from 'firebase/firestore';
+import { getFirestore, Firestore, collection, doc, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, getDocFromServer, getDoc, getDocsFromServer, serverTimestamp, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { firebaseConfig } from './firebase.config';
 import { Observable, BehaviorSubject } from 'rxjs';
 
@@ -74,6 +74,15 @@ export interface AppLocation {
   id: string;
   name: string;
   pricePerCourtHour: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  createdBy: string;
+}
+
+export interface AppShuttlecock {
+  id: string;
+  name: string;
+  pricePerTube: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
@@ -248,6 +257,33 @@ export class FirebaseService {
   isAdmin(): boolean {
     const user = this.currentUserSig();
     return isUserAdmin(user?.email);
+  }
+
+  async ensureFirestoreAuth(): Promise<boolean> {
+    if (!this.isBrowser) return false;
+    const currentUser = this.auth.currentUser;
+    if (!currentUser) return false;
+    try {
+      await currentUser.getIdToken();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async fetchShuttlecocksFromServer(): Promise<AppShuttlecock[]> {
+    if (!this.isBrowser) return [];
+    const path = 'shuttlecocks';
+    const authReady = await this.ensureFirestoreAuth();
+    if (!authReady) return [];
+
+    const snapshot = await getDocsFromServer(query(collection(this.db, path)));
+    const shuttlecocks: AppShuttlecock[] = [];
+    snapshot.forEach((docSnap) => {
+      shuttlecocks.push(docSnap.data() as AppShuttlecock);
+    });
+    shuttlecocks.sort((a, b) => a.name.localeCompare(b.name));
+    return shuttlecocks;
   }
 
   private async withTimeout<T>(promise: Promise<T>, action: string, timeoutMs = 12000): Promise<T> {
@@ -692,6 +728,80 @@ export class FirebaseService {
       await this.withTimeout(deleteDoc(locationDocRef), 'Deleting location');
     } catch (e) {
       this.handleFirestoreError(e, OperationType.DELETE, `${path}/${locationId}`);
+    }
+  }
+
+  // --- ADMIN SHUTTLECOCK SETTINGS ---
+  selectShuttlecocks(): Observable<AppShuttlecock[]> {
+    return new Observable<AppShuttlecock[]>((subscriber) => {
+      if (!this.isBrowser) {
+        subscriber.next([]);
+        return;
+      }
+
+      let unsubscribe = () => {};
+      let cancelled = false;
+
+      void this.ensureFirestoreAuth().then((authReady) => {
+        if (cancelled || !authReady) {
+          if (!cancelled && !authReady) {
+            subscriber.error(new Error('Missing or insufficient permissions.'));
+          }
+          return;
+        }
+
+        const path = 'shuttlecocks';
+        const q = query(collection(this.db, path));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          const shuttlecocks: AppShuttlecock[] = [];
+          snapshot.forEach((docSnap) => {
+            shuttlecocks.push(docSnap.data() as AppShuttlecock);
+          });
+          shuttlecocks.sort((a, b) => a.name.localeCompare(b.name));
+          subscriber.next(shuttlecocks);
+        }, (error) => {
+          subscriber.error(error);
+        });
+      });
+
+      return () => {
+        cancelled = true;
+        unsubscribe();
+      };
+    });
+  }
+
+  async createShuttlecock(name: string, pricePerTube: number): Promise<void> {
+    if (!this.isBrowser) return;
+    const path = 'shuttlecocks';
+    const shuttlecockId = 'shuttle_' + Date.now().toString();
+    const currentUser = this.auth.currentUser;
+    const payload = {
+      id: shuttlecockId,
+      name,
+      pricePerTube,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      createdBy: currentUser?.uid || 'system'
+    };
+
+    try {
+      const shuttlecockDocRef = doc(this.db, path, shuttlecockId);
+      await this.withTimeout(setDoc(shuttlecockDocRef, payload), 'Saving shuttlecock');
+    } catch (e) {
+      this.handleFirestoreError(e, OperationType.CREATE, `${path}/${shuttlecockId}`);
+    }
+  }
+
+  async deleteShuttlecock(shuttlecockId: string): Promise<void> {
+    if (!this.isBrowser) return;
+    const path = 'shuttlecocks';
+
+    try {
+      const shuttlecockDocRef = doc(this.db, path, shuttlecockId);
+      await this.withTimeout(deleteDoc(shuttlecockDocRef), 'Deleting shuttlecock');
+    } catch (e) {
+      this.handleFirestoreError(e, OperationType.DELETE, `${path}/${shuttlecockId}`);
     }
   }
 
