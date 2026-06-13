@@ -17,6 +17,7 @@ yarn-error.log
 
 # IDEs and editors
 .idea/
+.cursor/debug-*.log
 .project
 .classpath
 .c9/
