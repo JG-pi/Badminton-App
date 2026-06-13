@@ -116,6 +116,27 @@ service cloud.firestore {
              data.createdBy is string;
     }
 
+    function isValidShuttlecock(data) {
+      return data.keys().hasOnly([
+               'id',
+               'name',
+               'pricePerTube',
+               'createdAt',
+               'updatedAt',
+               'createdBy'
+             ]) &&
+             data.id is string &&
+             isValidId(data.id) &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             data.name.size() <= 128 &&
+             (data.pricePerTube is int || data.pricePerTube is float) &&
+             data.pricePerTube >= 0 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp &&
+             data.createdBy is string;
+    }
+
     function isNullableText(value, maxLength) {
       return value == null || (value is string && value.size() <= maxLength);
     }
@@ -231,6 +252,29 @@ service cloud.firestore {
                     incoming().updatedAt == request.time;
 
       allow delete: if isAdmin() && isValidId(locationId);
+    }
+
+    // MATCH MODULE: ADMIN SHUTTLECOCK SETTINGS
+    match /shuttlecocks/{shuttlecockId} {
+      allow read, get, list: if isAdmin();
+
+      allow create: if isAdmin() &&
+                    isValidId(shuttlecockId) &&
+                    isValidShuttlecock(incoming()) &&
+                    incoming().id == shuttlecockId &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time &&
+                    incoming().createdBy == request.auth.uid;
+
+      allow update: if isAdmin() &&
+                    isValidId(shuttlecockId) &&
+                    isValidShuttlecock(incoming()) &&
+                    incoming().id == existing().id &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().createdBy == existing().createdBy &&
+                    incoming().updatedAt == request.time;
+
+      allow delete: if isAdmin() && isValidId(shuttlecockId);
     }
 
     // MATCH MODULE: EVENTS
