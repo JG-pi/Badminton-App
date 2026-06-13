@@ -39,6 +39,8 @@ export interface AppEvent {
   location: string;
   additionalInfo: string;
   cost: number;
+  courtCost?: number;
+  shuttlecockCost?: number;
   finalised: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -551,7 +553,16 @@ export class FirebaseService {
   }
 
   // --- FIRESTORE EVENTS QUERIES/COMMANDS ---
-  async createEvent(name: string, date: string, capacity: number, location: string, additionalInfo: string, cost: number): Promise<void> {
+  async createEvent(
+    name: string,
+    date: string,
+    capacity: number,
+    location: string,
+    additionalInfo: string,
+    cost: number,
+    courtCost: number,
+    shuttlecockCost: number
+  ): Promise<void> {
     if (!this.isBrowser) return;
     const path = 'events';
     const eventId = 'ev_' + Date.now().toString();
@@ -565,6 +576,8 @@ export class FirebaseService {
         location,
         additionalInfo,
         cost,
+        courtCost,
+        shuttlecockCost,
         finalised: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

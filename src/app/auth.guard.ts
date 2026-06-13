@@ -1,4 +1,5 @@
-import { inject } from '@angular/core';
+import { PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { CanActivateFn, Router } from '@angular/router';
 import { filter, map, take } from 'rxjs/operators';
 import { FirebaseService } from './firebase';
@@ -10,8 +11,13 @@ import { FirebaseService } from './firebase';
  * checks persistence, so we must not judge logged-in/logged-out until it has answered.
  */
 export const authGuard: CanActivateFn = () => {
+  const platformId = inject(PLATFORM_ID);
   const firebase = inject(FirebaseService);
   const router = inject(Router);
+
+  if (!isPlatformBrowser(platformId)) {
+    return true;
+  }
 
   return firebase.authReady$.pipe(
     filter(ready => ready),
@@ -25,8 +31,13 @@ export const authGuard: CanActivateFn = () => {
  * send them to the dashboard instead of showing the login form again.
  */
 export const guestGuard: CanActivateFn = () => {
+  const platformId = inject(PLATFORM_ID);
   const firebase = inject(FirebaseService);
   const router = inject(Router);
+
+  if (!isPlatformBrowser(platformId)) {
+    return true;
+  }
 
   return firebase.authReady$.pipe(
     filter(ready => ready),

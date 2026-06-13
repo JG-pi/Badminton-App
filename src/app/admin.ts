@@ -11,6 +11,8 @@ import { TeamDraw, createRandomTeamDraw } from './team-draw';
 export interface AdminEventViewModel extends AppEvent {
   participants: AppBooking[];
   costPerParticipant: number;
+  courtCostTotal: number;
+  shuttlecockCostTotal: number;
 }
 
 @Component({
@@ -76,6 +78,10 @@ export class Admin implements OnInit, OnDestroy {
       nonNullable: true,
       validators: [Validators.required, Validators.min(0.25)]
     }),
+    shuttlecockCost: new FormControl<number>(0, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(0)]
+    }),
     date: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required]
@@ -122,12 +128,26 @@ export class Admin implements OnInit, OnDestroy {
     return this.eventForm.controls.cost.value || 0;
   }
 
+  get calculatedCourtCostPreview(): number {
+    const selectedLocation = this.getSelectedRateLocation();
+    if (!selectedLocation) return 0;
+
+    const courtCount = Number(this.eventForm.controls.courtCount.value) || 0;
+    const durationHours = Number(this.eventForm.controls.durationHours.value) || 0;
+    return this.roundCurrency(selectedLocation.pricePerCourtHour * courtCount * durationHours);
+  }
+
+  get calculatedShuttlecockCostPreview(): number {
+    return this.roundCurrency(Number(this.eventForm.controls.shuttlecockCost.value) || 0);
+  }
+
   ngOnInit(): void {
     this.authSubscription = combineLatest([
       this.firebaseService.user$,
       this.firebaseService.authReady$
     ]).subscribe(([user, authReady]) => {
       if (!authReady) return;
+      if (!this.firebaseService.isBrowser) return;
 
       if (!user) {
         this.isLoggedIn.set(false);
@@ -187,11 +207,15 @@ export class Admin implements OnInit, OnDestroy {
           const eventBookings = bookings.filter(b => b.eventId === e.id);
           const participantCount = eventBookings.length;
           const costPerParticipant = participantCount > 0 ? e.cost / participantCount : e.cost;
+          const courtCostTotal = this.getEventCourtCost(e);
+          const shuttlecockCostTotal = this.getEventShuttlecockCost(e);
 
           return {
             ...e,
             participants: eventBookings,
-            costPerParticipant
+            costPerParticipant,
+            courtCostTotal,
+            shuttlecockCostTotal
           };
         });
 
@@ -320,7 +344,9 @@ export class Admin implements OnInit, OnDestroy {
 
     const courtCount = Number(this.eventForm.controls.courtCount.value) || 0;
     const durationHours = Number(this.eventForm.controls.durationHours.value) || 0;
-    const totalCost = this.roundCurrency(selectedLocation.pricePerCourtHour * courtCount * durationHours);
+    const shuttlecockCost = this.calculatedShuttlecockCostPreview;
+    const courtCost = this.roundCurrency(selectedLocation.pricePerCourtHour * courtCount * durationHours);
+    const totalCost = this.roundCurrency(courtCost + shuttlecockCost);
 
     this.eventForm.controls.location.setValue(selectedLocation.name, { emitEvent: false });
     this.eventForm.controls.cost.setValue(totalCost, { emitEvent: false });
@@ -360,7 +386,9 @@ export class Admin implements OnInit, OnDestroy {
         payload.capacity,
         payload.location,
         payload.additionalInfo,
-        payload.cost
+        payload.cost,
+        payload.courtCost,
+        payload.shuttlecockCost
       );
       
       this.successMessage.set(`Successfully scheduled event "${payload.name}"!`);
@@ -375,8 +403,10 @@ export class Admin implements OnInit, OnDestroy {
 
   startEditEvent(event: AdminEventViewModel): void {
     const matchedLocation = this.locationList().find(location => location.name === event.location);
+    const courtCost = this.getEventCourtCost(event);
+    const shuttlecockCost = this.getEventShuttlecockCost(event);
     const inferredDuration = matchedLocation && matchedLocation.pricePerCourtHour > 0
-      ? this.roundCurrency(event.cost / matchedLocation.pricePerCourtHour)
+      ? this.roundCurrency(courtCost / matchedLocation.pricePerCourtHour)
       : 1;
 
     this.editingEventId.set(event.id);
@@ -389,6 +419,7 @@ export class Admin implements OnInit, OnDestroy {
       locationId: matchedLocation?.id || '',
       courtCount: 1,
       durationHours: inferredDuration,
+      shuttlecockCost,
       date: this.toDateTimeLocalInputValue(event.date),
       capacity: event.capacity,
       cost: event.cost,
@@ -443,7 +474,9 @@ export class Admin implements OnInit, OnDestroy {
         capacity: payload.capacity,
         location: payload.location,
         additionalInfo: payload.additionalInfo,
-        cost: payload.cost
+        cost: payload.cost,
+        courtCost: payload.courtCost,
+        shuttlecockCost: payload.shuttlecockCost
       });
 
       this.successMessage.set(`Updated event "${payload.name}".`);
@@ -464,6 +497,7 @@ export class Admin implements OnInit, OnDestroy {
       locationId: '',
       courtCount: 1,
       durationHours: 1,
+      shuttlecockCost: 0,
       date: '',
       capacity: 10,
       cost: 0,
@@ -478,6 +512,8 @@ export class Admin implements OnInit, OnDestroy {
     location: string;
     additionalInfo: string;
     cost: number;
+    courtCost: number;
+    shuttlecockCost: number;
   } | null {
     const selectedLocation = this.getSelectedRateLocation();
     if (!selectedLocation) {
@@ -487,7 +523,10 @@ export class Admin implements OnInit, OnDestroy {
     }
 
     this.syncCostCalculator();
-    const { name, date, capacity, additionalInfo, cost } = this.eventForm.getRawValue();
+    const { name, date, capacity, additionalInfo } = this.eventForm.getRawValue();
+    const courtCost = this.calculatedCourtCostPreview;
+    const shuttlecockCost = this.calculatedShuttlecockCostPreview;
+    const cost = this.roundCurrency(courtCost + shuttlecockCost);
 
     return {
       name,
@@ -495,8 +534,18 @@ export class Admin implements OnInit, OnDestroy {
       capacity,
       location: selectedLocation.name,
       additionalInfo,
-      cost
+      cost,
+      courtCost,
+      shuttlecockCost
     };
+  }
+
+  private getEventCourtCost(event: AppEvent): number {
+    return typeof event.courtCost === 'number' ? event.courtCost : event.cost;
+  }
+
+  private getEventShuttlecockCost(event: AppEvent): number {
+    return typeof event.shuttlecockCost === 'number' ? event.shuttlecockCost : 0;
   }
 
   private toDateTimeLocalInputValue(dateValue: string): string {

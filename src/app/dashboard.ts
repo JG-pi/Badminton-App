@@ -12,6 +12,8 @@ export interface EventViewModel extends AppEvent {
   participants: AppBooking[];
   participantCount: number;
   costPerParticipant: number;
+  courtCostTotal: number;
+  shuttlecockCostTotal: number;
   isCurrentUserSignedUp: boolean;
   currentUserBooking?: AppBooking;
   isFull: boolean;
@@ -53,6 +55,7 @@ export class Dashboard implements OnInit, OnDestroy {
       this.firebaseService.authReady$
     ]).subscribe(([user, authReady]) => {
       if (!authReady) return;
+      if (!this.firebaseService.isBrowser) return;
 
       if (!user) {
         this.loading.set(false);
@@ -88,6 +91,8 @@ export class Dashboard implements OnInit, OnDestroy {
           // Cost split calculation: split equally by number of participants (minimum 1, or show shared logic if 0)
           const divisor = participantCount > 0 ? participantCount : 1;
           const costPerParticipant = e.cost / divisor;
+          const courtCostTotal = typeof e.courtCost === 'number' ? e.courtCost : e.cost;
+          const shuttlecockCostTotal = typeof e.shuttlecockCost === 'number' ? e.shuttlecockCost : 0;
 
           const currentUserBooking = eventBookings.find(b => b.userId === user.uid);
           const isCurrentUserSignedUp = !!currentUserBooking;
@@ -98,6 +103,8 @@ export class Dashboard implements OnInit, OnDestroy {
             participants: eventBookings,
             participantCount,
             costPerParticipant,
+            courtCostTotal,
+            shuttlecockCostTotal,
             isCurrentUserSignedUp,
             currentUserBooking,
             isFull

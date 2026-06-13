@@ -216,6 +216,31 @@
                     <span class="font-mono font-bold text-white text-sm">{{ event.participantCount }} joined</span>
                   </div>
 
+                  <details class="group mt-3 rounded-xl border border-indigo-400/40 bg-indigo-700/35 p-3">
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold uppercase tracking-wider text-white">
+                      <span>Cost details</span>
+                      <mat-icon class="text-base transition-transform group-open:rotate-180">expand_more</mat-icon>
+                    </summary>
+                    <div class="mt-3 space-y-2 border-t border-indigo-400/35 pt-3">
+                      <div class="flex justify-between items-center">
+                        <span class="font-medium text-indigo-200">Court cost:</span>
+                        <span class="font-mono font-bold text-white">{{ event.courtCostTotal | currency:'USD' }}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="font-medium text-indigo-200">Shuttlecocks:</span>
+                        <span class="font-mono font-bold text-white">{{ event.shuttlecockCostTotal | currency:'USD' }}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="font-medium text-indigo-200">Total event cost:</span>
+                        <span class="font-mono font-bold text-white">{{ event.cost | currency:'USD' }}</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                        <span class="font-medium text-indigo-200">Equal share:</span>
+                        <span class="font-mono font-bold text-white">{{ event.participantCount }} players / {{ event.costPerParticipant | currency:'USD' }}</span>
+                      </div>
+                    </div>
+                  </details>
+
                   @if (event.participantCount === 0) {
                     <div class="bg-indigo-700/60 p-3 rounded-xl border border-indigo-500 text-xs text-indigo-100 leading-relaxed mt-2 flex items-start gap-1.5">
                       <mat-icon class="text-xs text-indigo-300 mt-0.5">help_outline</mat-icon>
