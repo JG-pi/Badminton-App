@@ -319,20 +319,56 @@
               }
             </div>
 
+            <!-- Shuttlecock Tube -->
+            <div class="space-y-1.5" id="ctrl-shuttlecock-container">
+              <label for="shuttlecockId" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Shuttlecock Tube</label>
+              <select
+                id="shuttlecockId"
+                formControlName="shuttlecockId"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-sans"
+              >
+                <option value="">Select a saved shuttlecock</option>
+                @for (shuttlecock of shuttlecockList(); track shuttlecock.id) {
+                  <option [value]="shuttlecock.id">{{ shuttlecock.name }}</option>
+                }
+              </select>
+              @if (getSelectedShuttlecock(); as selectedShuttlecock) {
+                <p class="text-xs text-slate-400 font-sans">{{ selectedShuttlecock.pricePerTube | currency:'USD' }} per tube</p>
+              } @else if (shuttlecockList().length === 0) {
+                <p class="text-xs text-amber-700 font-sans">Add a shuttlecock in Locations before scheduling.</p>
+              } @else if (editingEventId()) {
+                <p class="text-xs text-slate-400 font-sans">Stored shuttlecock cost will be preserved unless a tube is selected.</p>
+              }
+            </div>
+
+            <!-- Shuttlecock Tube Count -->
+            <div class="space-y-1.5" id="ctrl-shuttlecock-tube-count-container">
+              <label for="shuttlecockTubeCount" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Tubes Used</label>
+              <input
+                id="shuttlecockTubeCount"
+                type="number"
+                formControlName="shuttlecockTubeCount"
+                min="0"
+                step="0.01"
+                placeholder="1.5"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono font-bold"
+              />
+              <p class="text-xs text-slate-400 font-sans">Decimals are supported, such as 0.5 or 2.25 tubes.</p>
+              @if (getFieldError('shuttlecockTubeCount'); as error) {
+                <p class="text-xs text-red-600 font-sans">{{ error }}</p>
+              }
+            </div>
+
             <!-- Shuttlecock Cost -->
             <div class="space-y-1.5" id="ctrl-shuttlecock-cost-container">
-              <label for="shuttlecockCost" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Shuttlecock Cost ($)</label>
+              <label for="shuttlecockCost" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Calculated Shuttlecock Cost ($)</label>
               <input
                 id="shuttlecockCost"
                 type="number"
                 formControlName="shuttlecockCost"
-                min="0"
-                step="0.01"
-                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono font-bold"
+                readonly
+                class="block w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none font-mono font-bold"
               />
-              @if (getFieldError('shuttlecockCost'); as error) {
-                <p class="text-xs text-red-600 font-sans">{{ error }}</p>
-              }
             </div>
 
             <!-- Cost -->
@@ -486,6 +522,86 @@
                     title="Delete location"
                   >
                     @if (pendingDeleteLocationId() === location.id) {
+                      <span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-red-500 rounded-full animate-spin"></span>
+                    } @else {
+                      <mat-icon class="text-lg">delete_outline</mat-icon>
+                    }
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8" id="admin-shuttlecock-settings">
+          <div class="border-b border-slate-100 pb-4 mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans select-none">Admin Settings</h4>
+              <p class="text-lg font-display font-black text-slate-900 mt-1">Shuttlecock Tubes</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700">
+              <mat-icon class="text-xl">sports_tennis</mat-icon>
+            </div>
+          </div>
+
+          <form [formGroup]="shuttlecockForm" (ngSubmit)="handleCreateShuttlecock()" class="grid grid-cols-1 md:grid-cols-[1fr_170px_auto] gap-3 items-end">
+            <div class="space-y-1.5">
+              <label for="shuttlecockName" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">Shuttlecock Name</label>
+              <input
+                id="shuttlecockName"
+                type="text"
+                formControlName="name"
+                placeholder="RSL Classic Tourney"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-sans"
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label for="shuttlecockRate" class="block text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">$/Tube</label>
+              <input
+                id="shuttlecockRate"
+                type="number"
+                formControlName="pricePerTube"
+                min="0"
+                step="0.01"
+                class="block w-full px-4 py-2.5 bg-slate-55 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-colors font-mono font-bold"
+              />
+            </div>
+            <button
+              type="submit"
+              [disabled]="shuttlecockForm.invalid || savingShuttlecock()"
+              class="h-11 px-5 rounded-xl bg-slate-900 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              @if (savingShuttlecock()) {
+                <span class="inline-block w-4 h-4 border-2 border-slate-500 border-t-white rounded-full animate-spin"></span>
+                Saving
+              } @else {
+                <mat-icon class="text-base">add</mat-icon>
+                Add
+              }
+            </button>
+          </form>
+
+          @if (shuttlecockList().length === 0) {
+            <div class="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
+              <mat-icon class="text-3xl text-slate-300">sports_tennis</mat-icon>
+              <p class="mt-2 text-xs font-bold text-slate-500">No saved shuttlecocks yet.</p>
+            </div>
+          } @else {
+            <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              @for (shuttlecock of shuttlecockList(); track shuttlecock.id) {
+                <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-display font-black text-slate-900 truncate">{{ shuttlecock.name }}</p>
+                    <p class="text-xs text-slate-500 font-mono mt-1">{{ shuttlecock.pricePerTube | currency:'USD' }} / tube</p>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="handleDeleteShuttlecock(shuttlecock)"
+                    [disabled]="pendingDeleteShuttlecockId() === shuttlecock.id"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    title="Delete shuttlecock"
+                  >
+                    @if (pendingDeleteShuttlecockId() === shuttlecock.id) {
                       <span class="inline-block w-4 h-4 border-2 border-slate-300 border-t-red-500 rounded-full animate-spin"></span>
                     } @else {
                       <mat-icon class="text-lg">delete_outline</mat-icon>
