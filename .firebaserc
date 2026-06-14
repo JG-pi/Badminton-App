@@ -1,5 +1,10 @@
 {
   "projects": {
-    "default": "shuttlemate-b7ec4"
-  }
+    "default": "shuttlemate-b7ec4",
+    "dev": "shuttlemate-dev",
+    "staging": "shuttlemate-staging",
+    "prod": "shuttlemate-b7ec4"
+  },
+  "targets": {},
+  "etags": {}
 }
