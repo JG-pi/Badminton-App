@@ -1,7 +1,7 @@
 import { Injectable, inject, PLATFORM_ID, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth, User, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, getRedirectResult, setPersistence, browserLocalPersistence, inMemoryPersistence, signInWithPopup, signInWithRedirect, browserPopupRedirectResolver } from 'firebase/auth';
+import { getAuth, Auth, User, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, getRedirectResult, setPersistence, browserLocalPersistence, inMemoryPersistence, signInWithPopup, signInWithRedirect, browserPopupRedirectResolver, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, Firestore, collection, doc, setDoc, updateDoc, deleteDoc, query, where, onSnapshot, getDocFromServer, getDoc, getDocsFromServer, serverTimestamp, Timestamp, orderBy, limit } from 'firebase/firestore';
 import { firebaseConfig } from './firebase.config';
 import { Observable, BehaviorSubject } from 'rxjs';
@@ -487,6 +487,22 @@ export class FirebaseService {
       void this.recordRuntimeError({
         area: 'login',
         stage: 'email-password-sign-in',
+        error: e,
+        attemptedEmail: email
+      });
+      throw e;
+    }
+  }
+
+  async sendPasswordReset(email: string): Promise<void> {
+    if (!this.isBrowser) throw new Error('Not running in browser state');
+    try {
+      await sendPasswordResetEmail(this.auth, email);
+    } catch (e) {
+      console.error('Password reset error', e);
+      void this.recordRuntimeError({
+        area: 'login',
+        stage: 'password-reset-email',
         error: e,
         attemptedEmail: email
       });
