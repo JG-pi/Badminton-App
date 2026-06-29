@@ -8,6 +8,7 @@ import { FirebaseService, AppEvent, AppBooking, AppLocation, AppRuntimeError, Ap
 import { MarkdownPipe } from './markdown';
 import { TeamDraw, createRandomTeamDraw } from './team-draw';
 import { formatEventDateTimeRange } from './event-time';
+import { ThemeToggle } from './theme-toggle';
 
 export interface AdminEventViewModel extends AppEvent {
   participants: AppBooking[];
@@ -29,10 +30,10 @@ interface AdminNavItem {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-admin',
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, MatIconModule, MarkdownPipe],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, MatIconModule, MarkdownPipe, ThemeToggle],
   templateUrl: './admin.html',
   host: {
-    class: 'block min-h-screen bg-neutral-50'
+    class: 'block min-h-screen bg-neutral-50 dark:bg-slate-950'
   }
 })
 export class Admin implements OnInit, OnDestroy {

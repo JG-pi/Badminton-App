@@ -8,6 +8,7 @@ import { FirebaseService, AppEvent, AppBooking, isUserAdmin } from './firebase';
 import { MarkdownPipe } from './markdown';
 import { TeamDraw, createRandomTeamDraw } from './team-draw';
 import { formatEventDateTimeRange } from './event-time';
+import { ThemeToggle } from './theme-toggle';
 
 export interface EventViewModel extends AppEvent {
   participants: AppBooking[];
@@ -23,10 +24,10 @@ export interface EventViewModel extends AppEvent {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, MatIconModule, MarkdownPipe],
+  imports: [CommonModule, RouterLink, MatIconModule, MarkdownPipe, ThemeToggle],
   templateUrl: './dashboard.html',
   host: {
-    class: 'block min-h-screen bg-neutral-50'
+    class: 'block min-h-screen bg-neutral-50 dark:bg-slate-950'
   }
 })
 export class Dashboard implements OnInit, OnDestroy {
