@@ -76,6 +76,18 @@ describe('Dashboard', () => {
       'past-recent',
       'past-older'
     ]);
+    expect(component.upcomingEvents().map(e => e.id)).toEqual([
+      'future-sooner',
+      'future-later'
+    ]);
+    expect(component.pastEvents().map(e => e.id)).toEqual([
+      'past-recent',
+      'past-older'
+    ]);
+    expect(component.eventSections().map(section => section.id)).toEqual([
+      'current-upcoming',
+      'history'
+    ]);
   });
 
   it('keeps an event in upcoming while its duration has not ended', () => {
@@ -91,6 +103,40 @@ describe('Dashboard', () => {
       'current',
       'future',
       'past'
+    ]);
+    expect(component.upcomingEvents().map(e => e.id)).toEqual([
+      'current',
+      'future'
+    ]);
+    expect(component.pastEvents().map(e => e.id)).toEqual([
+      'past'
+    ]);
+  });
+
+  it('keeps invalid-date events out of current and history sections', () => {
+    events$.next([
+      event('future', 'Future', '2026-06-16T18:00', 2),
+      event('invalid', 'Date Missing', 'not-a-date', 2),
+      event('past', 'Past', '2026-06-14T18:00', 2)
+    ]);
+
+    fixture.detectChanges();
+
+    expect(component.eventList().map(e => e.id)).toEqual([
+      'future',
+      'past',
+      'invalid'
+    ]);
+    expect(component.upcomingEvents().map(e => e.id)).toEqual([
+      'future'
+    ]);
+    expect(component.pastEvents().map(e => e.id)).toEqual([
+      'past'
+    ]);
+    expect(component.eventSections().map(section => section.id)).toEqual([
+      'current-upcoming',
+      'history',
+      'unscheduled'
     ]);
   });
 
