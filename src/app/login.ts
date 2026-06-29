@@ -4,14 +4,15 @@ import { Router } from '@angular/router';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { FirebaseService } from './firebase';
+import { ThemeToggle } from './theme-toggle';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-login',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, ThemeToggle],
   templateUrl: './login.html',
   host: {
-    class: 'block min-h-screen bg-neutral-50 flex items-center justify-center p-4 md:p-8 animate-fade-in'
+    class: 'block min-h-screen bg-neutral-50 dark:bg-slate-950 flex items-center justify-center p-4 md:p-8 animate-fade-in'
   }
 })
 export class Login {
