@@ -94,9 +94,18 @@
       </div>
     } @else {
       
-      <!-- List Grid -->
-      <div class="grid grid-cols-1 gap-12 sm:gap-14" id="events-grid-layout">
-        @for (event of eventList(); track event.id) {
+      <!-- Event Sections -->
+      <div class="space-y-14 sm:space-y-16" id="events-grid-layout">
+        @for (section of eventSections(); track section.id) {
+          <section [id]="'events-section-' + section.id" class="space-y-6">
+            <div class="flex flex-col gap-2 border-l-4 border-indigo-600 pl-4 sm:pl-5">
+              <p class="text-xs font-bold uppercase tracking-widest text-indigo-600 font-sans">{{ section.events.length }} events</p>
+              <h3 class="text-2xl sm:text-3xl font-display font-black tracking-tight text-slate-900">{{ section.title }}</h3>
+              <p class="max-w-2xl text-sm text-slate-500 leading-relaxed">{{ section.description }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-12 sm:gap-14">
+              @for (event of section.events; track event.id) {
           
           <!-- Outer Bento Wrapper -->
           <div class="bg-slate-100/50 rounded-[3rem] border border-slate-200/85 p-6 sm:p-8 flex flex-col gap-6 shadow-sm hover:shadow-md hover:border-slate-350 transition-all" [id]="'event-card-' + event.id">
@@ -453,6 +462,9 @@
 
           </div>
 
+              }
+            </div>
+          </section>
         }
       </div>
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +21,13 @@ export interface EventViewModel extends AppEvent {
   isFull: boolean;
 }
 
+interface EventSection {
+  id: string;
+  title: string;
+  description: string;
+  events: EventViewModel[];
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
@@ -38,6 +45,29 @@ export class Dashboard implements OnInit, OnDestroy {
   authSubscription?: Subscription;
   eventsAndBookingsSub?: Subscription;
   eventList = signal<EventViewModel[]>([]);
+  upcomingEvents = computed(() => this.eventList().filter(event => !this.isPastEvent(event) && this.getEventEndTime(event) !== null));
+  pastEvents = computed(() => this.eventList().filter(event => this.isPastEvent(event)));
+  private unscheduledEvents = computed(() => this.eventList().filter(event => this.getEventEndTime(event) === null));
+  eventSections = computed<EventSection[]>(() => [
+    {
+      id: 'current-upcoming',
+      title: 'Current & Upcoming Events',
+      description: 'Events in progress and upcoming sessions you can plan for.',
+      events: this.upcomingEvents()
+    },
+    {
+      id: 'history',
+      title: 'Event History',
+      description: 'Completed sessions, shown with the most recent first.',
+      events: this.pastEvents()
+    },
+    {
+      id: 'unscheduled',
+      title: 'Other Events',
+      description: 'Events without a valid date, kept separate from current and historical sections.',
+      events: this.unscheduledEvents()
+    }
+  ].filter(section => section.events.length > 0));
   myBookings = signal<AppBooking[]>([]);
   loading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
@@ -189,6 +219,11 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     return startTime + event.durationHours * 60 * 60 * 1000;
+  }
+
+  private isPastEvent(event: Pick<AppEvent, 'date' | 'durationHours'>): boolean {
+    const endTime = this.getEventEndTime(event);
+    return endTime !== null && endTime < Date.now();
   }
 
   async handleJoinEvent(eventVm: EventViewModel): Promise<void> {
