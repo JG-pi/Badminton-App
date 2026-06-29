@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { FirebaseService, AppEvent, AppBooking, isUserAdmin } from './firebase';
 import { MarkdownPipe } from './markdown';
 import { TeamDraw, createRandomTeamDraw } from './team-draw';
 import { formatEventDateTimeRange } from './event-time';
+import { ThemeToggle } from './theme-toggle';
 
 export interface EventViewModel extends AppEvent {
   participants: AppBooking[];
@@ -20,13 +21,20 @@ export interface EventViewModel extends AppEvent {
   isFull: boolean;
 }
 
+interface EventSection {
+  id: string;
+  title: string;
+  description: string;
+  events: EventViewModel[];
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink, MatIconModule, MarkdownPipe],
+  imports: [CommonModule, RouterLink, MatIconModule, MarkdownPipe, ThemeToggle],
   templateUrl: './dashboard.html',
   host: {
-    class: 'block min-h-screen bg-neutral-50'
+    class: 'block min-h-screen bg-neutral-50 dark:bg-slate-950'
   }
 })
 export class Dashboard implements OnInit, OnDestroy {
@@ -37,6 +45,29 @@ export class Dashboard implements OnInit, OnDestroy {
   authSubscription?: Subscription;
   eventsAndBookingsSub?: Subscription;
   eventList = signal<EventViewModel[]>([]);
+  upcomingEvents = computed(() => this.eventList().filter(event => !this.isPastEvent(event) && this.getEventEndTime(event) !== null));
+  pastEvents = computed(() => this.eventList().filter(event => this.isPastEvent(event)));
+  private unscheduledEvents = computed(() => this.eventList().filter(event => this.getEventEndTime(event) === null));
+  eventSections = computed<EventSection[]>(() => [
+    {
+      id: 'current-upcoming',
+      title: 'Current & Upcoming Events',
+      description: 'Events in progress and upcoming sessions you can plan for.',
+      events: this.upcomingEvents()
+    },
+    {
+      id: 'history',
+      title: 'Event History',
+      description: 'Completed sessions, shown with the most recent first.',
+      events: this.pastEvents()
+    },
+    {
+      id: 'unscheduled',
+      title: 'Other Events',
+      description: 'Events without a valid date, kept separate from current and historical sections.',
+      events: this.unscheduledEvents()
+    }
+  ].filter(section => section.events.length > 0));
   myBookings = signal<AppBooking[]>([]);
   loading = signal<boolean>(true);
   errorMessage = signal<string | null>(null);
@@ -114,7 +145,7 @@ export class Dashboard implements OnInit, OnDestroy {
           };
         });
 
-        this.eventList.set(viewModels);
+        this.eventList.set(this.sortEventsForDashboard(viewModels));
         
         // Filter current user's general bookings
         this.myBookings.set(bookings.filter(b => b.userId === user.uid));
@@ -140,6 +171,59 @@ export class Dashboard implements OnInit, OnDestroy {
 
   formatEventTimeRange(event: AppEvent): string {
     return formatEventDateTimeRange(event);
+  }
+
+  private sortEventsForDashboard(events: EventViewModel[]): EventViewModel[] {
+    const now = Date.now();
+
+    return [...events].sort((a, b) => {
+      const aStartTime = this.getEventStartTime(a);
+      const bStartTime = this.getEventStartTime(b);
+      const aEndTime = this.getEventEndTime(a);
+      const bEndTime = this.getEventEndTime(b);
+      const aHasValidDate = aEndTime !== null;
+      const bHasValidDate = bEndTime !== null;
+
+      if (aHasValidDate !== bHasValidDate) {
+        return aHasValidDate ? -1 : 1;
+      }
+
+      if (!aHasValidDate || !bHasValidDate) {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      }
+
+      const aIsPast = aEndTime < now;
+      const bIsPast = bEndTime < now;
+
+      if (aIsPast !== bIsPast) {
+        return aIsPast ? 1 : -1;
+      }
+
+      return aIsPast ? bStartTime! - aStartTime! : aStartTime! - bStartTime!;
+    });
+  }
+
+  private getEventStartTime(event: Pick<AppEvent, 'date'>): number | null {
+    const startTime = new Date(event.date).getTime();
+    return Number.isNaN(startTime) ? null : startTime;
+  }
+
+  private getEventEndTime(event: Pick<AppEvent, 'date' | 'durationHours'>): number | null {
+    const startTime = this.getEventStartTime(event);
+    if (startTime === null) {
+      return null;
+    }
+
+    if (typeof event.durationHours !== 'number' || event.durationHours <= 0) {
+      return startTime;
+    }
+
+    return startTime + event.durationHours * 60 * 60 * 1000;
+  }
+
+  private isPastEvent(event: Pick<AppEvent, 'date' | 'durationHours'>): boolean {
+    const endTime = this.getEventEndTime(event);
+    return endTime !== null && endTime < Date.now();
   }
 
   async handleJoinEvent(eventVm: EventViewModel): Promise<void> {

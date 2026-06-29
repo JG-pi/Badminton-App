@@ -28,13 +28,14 @@ const defineArgs = Object.entries(envDefines).map(([identifier, envName]) => {
 
 const ngArgsByCommand = {
   build: ['build', '--configuration', 'development,dev'],
+  'build:deploy': ['build', '--configuration', 'production,dev'],
   serve: ['serve', '--build-target', 'app:build:development,dev']
 };
 
 const ngArgs = ngArgsByCommand[command];
 
 if (!ngArgs) {
-  console.error('Usage: node scripts/angular-dev.mjs <build|serve> [angular args...]');
+  console.error('Usage: node scripts/angular-dev.mjs <build|build:deploy|serve> [angular args...]');
   process.exit(1);
 }
 

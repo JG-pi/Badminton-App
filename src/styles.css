@@ -2,6 +2,9 @@
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
+@source "../**/*.{html,ts}";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -28,6 +31,237 @@ body {
   font-family: var(--font-sans);
   background-color: #f8fafc; /* slate-50 */
   color: #0f172a; /* slate-900 */
+}
+
+.dark body {
+  background-color: #020617; /* slate-950 */
+  color: #e2e8f0; /* slate-200 */
+  color-scheme: dark;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Dark theme compatibility layer for the existing utility-heavy templates. */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+.dark option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark table {
+  color: #cbd5e1;
+}
+
+.dark [class~="bg-white"],
+.dark [class~="bg-neutral-50"] {
+  background-color: #0f172a !important;
+}
+
+.dark [class~="bg-white/95"] {
+  background-color: rgba(15, 23, 42, 0.92) !important;
+}
+
+.dark [class~="bg-slate-50"],
+.dark [class~="bg-slate-55"],
+.dark [class~="bg-slate-100"],
+.dark [class~="bg-slate-50/70"],
+.dark [class~="bg-slate-50/50"],
+.dark [class~="bg-slate-100/50"] {
+  background-color: rgba(30, 41, 59, 0.72) !important;
+}
+
+.dark [class~="bg-slate-900"] {
+  background-color: #020617 !important;
+}
+
+.dark [class~="bg-slate-800"] {
+  background-color: #0f172a !important;
+}
+
+.dark [class~="bg-indigo-50"] {
+  background-color: rgba(67, 56, 202, 0.22) !important;
+}
+
+.dark [class~="bg-indigo-100"] {
+  background-color: rgba(79, 70, 229, 0.28) !important;
+}
+
+.dark [class~="bg-indigo-600"] {
+  background-color: #6366f1 !important;
+}
+
+.dark [class~="bg-indigo-700"] {
+  background-color: #4338ca !important;
+}
+
+.dark [class~="bg-indigo-700/35"] {
+  background-color: rgba(49, 46, 129, 0.48) !important;
+}
+
+.dark [class~="bg-indigo-700/60"] {
+  background-color: rgba(49, 46, 129, 0.68) !important;
+}
+
+.dark [class~="bg-emerald-50"],
+.dark [class~="bg-emerald-55"] {
+  background-color: rgba(6, 78, 59, 0.36) !important;
+}
+
+.dark [class~="bg-amber-50"],
+.dark [class~="bg-amber-55"] {
+  background-color: rgba(120, 53, 15, 0.34) !important;
+}
+
+.dark [class~="bg-red-50"] {
+  background-color: rgba(127, 29, 29, 0.34) !important;
+}
+
+.dark [class~="border-slate-100"],
+.dark [class~="border-slate-150"],
+.dark [class~="border-slate-200"],
+.dark [class~="border-slate-200/60"],
+.dark [class~="border-slate-200/80"],
+.dark [class~="border-slate-200/85"],
+.dark [class~="border-slate-250"],
+.dark [class~="border-slate-350"] {
+  border-color: #334155 !important;
+}
+
+.dark [class~="border-white/10"] {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.dark [class~="border-indigo-100"],
+.dark [class~="border-indigo-150"],
+.dark [class~="border-indigo-200"] {
+  border-color: rgba(129, 140, 248, 0.34) !important;
+}
+
+.dark [class~="border-emerald-150"],
+.dark [class~="border-emerald-200"],
+.dark [class~="border-emerald-250"] {
+  border-color: rgba(52, 211, 153, 0.34) !important;
+}
+
+.dark [class~="border-amber-200"],
+.dark [class~="border-amber-205"] {
+  border-color: rgba(251, 191, 36, 0.34) !important;
+}
+
+.dark [class~="border-red-200"],
+.dark [class~="border-red-200/85"] {
+  border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+.dark [class~="divide-slate-150"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+
+.dark [class~="text-slate-950"],
+.dark [class~="text-slate-900"],
+.dark [class~="text-slate-850"],
+.dark [class~="text-slate-800"],
+.dark [class~="text-slate-750"],
+.dark [class~="text-slate-700"] {
+  color: #f8fafc !important;
+}
+
+.dark [class~="text-slate-650"],
+.dark [class~="text-slate-600"],
+.dark [class~="text-slate-500"],
+.dark [class~="text-slate-450"],
+.dark [class~="text-slate-400"],
+.dark [class~="text-slate-350"],
+.dark [class~="text-slate-300"] {
+  color: #94a3b8 !important;
+}
+
+.dark [class~="text-indigo-900"],
+.dark [class~="text-indigo-800"],
+.dark [class~="text-indigo-700"],
+.dark [class~="text-indigo-650"],
+.dark [class~="text-indigo-600"] {
+  color: #a5b4fc !important;
+}
+
+.dark [class~="text-indigo-200"],
+.dark [class~="text-indigo-100"] {
+  color: #c7d2fe !important;
+}
+
+.dark [class~="text-emerald-950"],
+.dark [class~="text-emerald-900"],
+.dark [class~="text-emerald-800"],
+.dark [class~="text-emerald-700"],
+.dark [class~="text-emerald-600"],
+.dark [class~="text-emerald-550"] {
+  color: #6ee7b7 !important;
+}
+
+.dark [class~="text-amber-900"],
+.dark [class~="text-amber-800"],
+.dark [class~="text-amber-700"],
+.dark [class~="text-amber-600"] {
+  color: #fcd34d !important;
+}
+
+.dark [class~="text-red-950"],
+.dark [class~="text-red-900"],
+.dark [class~="text-red-800"],
+.dark [class~="text-red-650"],
+.dark [class~="text-red-600"],
+.dark [class~="text-red-500"] {
+  color: #fca5a5 !important;
+}
+
+.dark [class~="shadow-sm"],
+.dark [class~="shadow-md"],
+.dark [class~="shadow-lg"],
+.dark [class~="shadow-xl"],
+.dark [class~="shadow-indigo-50"],
+.dark [class~="shadow-indigo-100"],
+.dark [class~="shadow-indigo-100/50"],
+.dark [class~="shadow-slate-200/40"],
+.dark [class~="shadow-amber-100"] {
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.18) !important;
+}
+
+.dark [class~="hover:bg-slate-50"]:hover,
+.dark [class~="hover:bg-slate-50/50"]:hover,
+.dark [class~="hover:bg-slate-100"]:hover {
+  background-color: rgba(51, 65, 85, 0.72) !important;
+}
+
+.dark [class~="hover:text-slate-950"]:hover,
+.dark [class~="hover:text-slate-900"]:hover,
+.dark [class~="hover:text-slate-800"]:hover {
+  color: #ffffff !important;
+}
+
+.dark .prose {
+  color: #cbd5e1 !important;
+}
+
+.dark .prose :where(h1, h2, h3, h4, strong) {
+  color: #f8fafc !important;
 }
 
 
