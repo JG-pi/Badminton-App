@@ -115,7 +115,7 @@ export class Dashboard implements OnInit, OnDestroy {
           };
         });
 
-        this.eventList.set(viewModels);
+        this.eventList.set(this.sortEventsForDashboard(viewModels));
         
         // Filter current user's general bookings
         this.myBookings.set(bookings.filter(b => b.userId === user.uid));
@@ -141,6 +141,54 @@ export class Dashboard implements OnInit, OnDestroy {
 
   formatEventTimeRange(event: AppEvent): string {
     return formatEventDateTimeRange(event);
+  }
+
+  private sortEventsForDashboard(events: EventViewModel[]): EventViewModel[] {
+    const now = Date.now();
+
+    return [...events].sort((a, b) => {
+      const aStartTime = this.getEventStartTime(a);
+      const bStartTime = this.getEventStartTime(b);
+      const aEndTime = this.getEventEndTime(a);
+      const bEndTime = this.getEventEndTime(b);
+      const aHasValidDate = aEndTime !== null;
+      const bHasValidDate = bEndTime !== null;
+
+      if (aHasValidDate !== bHasValidDate) {
+        return aHasValidDate ? -1 : 1;
+      }
+
+      if (!aHasValidDate || !bHasValidDate) {
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      }
+
+      const aIsPast = aEndTime < now;
+      const bIsPast = bEndTime < now;
+
+      if (aIsPast !== bIsPast) {
+        return aIsPast ? 1 : -1;
+      }
+
+      return aIsPast ? bStartTime! - aStartTime! : aStartTime! - bStartTime!;
+    });
+  }
+
+  private getEventStartTime(event: Pick<AppEvent, 'date'>): number | null {
+    const startTime = new Date(event.date).getTime();
+    return Number.isNaN(startTime) ? null : startTime;
+  }
+
+  private getEventEndTime(event: Pick<AppEvent, 'date' | 'durationHours'>): number | null {
+    const startTime = this.getEventStartTime(event);
+    if (startTime === null) {
+      return null;
+    }
+
+    if (typeof event.durationHours !== 'number' || event.durationHours <= 0) {
+      return startTime;
+    }
+
+    return startTime + event.durationHours * 60 * 60 * 1000;
   }
 
   async handleJoinEvent(eventVm: EventViewModel): Promise<void> {
